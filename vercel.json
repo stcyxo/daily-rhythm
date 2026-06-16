@@ -9,6 +9,6 @@
       }
     }
   ],
-  "installCommand": "npm install",
-  "buildCommand": "npm run build"
+  "installCommand": "npm install && chmod +x node_modules/.bin/vite",
+  "buildCommand": "bash -c 'npm run build'"
 }
