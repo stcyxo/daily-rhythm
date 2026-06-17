@@ -412,40 +412,30 @@ export function HomePage() {
   const getCurrentVideoUrl = (): string => {
     const currentId = settings.favoriteStar;
     
-    // 先查找预置视频
-    const preset = getVideoById(currentId);
-    if (preset) return preset.bilibiliUrl;
-    
-    // 再查找自定义视频
+    // 先查找自定义视频
     const custom = customVideos.find(v => v.id === currentId);
     if (custom) return custom.url;
     
-    // 默认第一个预置视频
-    return motivationalVideos[0].bilibiliUrl;
+    // 如果没有自定义视频，返回空或提示
+    return '';
   };
   
   const getCurrentVideoName = (): string => {
     const currentId = settings.favoriteStar;
     
-    const preset = getVideoById(currentId);
-    if (preset) return preset.name;
-    
     const custom = customVideos.find(v => v.id === currentId);
     if (custom) return custom.name;
     
-    return motivationalVideos[0].name;
+    return '请先添加视频';
   };
   
   const getCurrentVideoDesc = (): string => {
     const currentId = settings.favoriteStar;
     
-    const preset = getVideoById(currentId);
-    if (preset) return preset.description;
-    
     const custom = customVideos.find(v => v.id === currentId);
     if (custom) return custom.description;
     
-    return motivationalVideos[0].description;
+    return '在设置中添加你喜欢的视频';
   };
   
   return (
@@ -602,46 +592,60 @@ export function HomePage() {
             </div>
 
             <div className="p-4">
-              <div className="aspect-video bg-black rounded-xl overflow-hidden mb-4">
-                <iframe
-                  src={getCurrentVideoUrl()}
-                  className="w-full h-full"
-                  frameBorder="0"
-                  allowFullScreen
-                  title="激励视频"
-                />
-              </div>
+              {customVideos.length > 0 ? (
+                <>
+                  <div className="aspect-video bg-black rounded-xl overflow-hidden mb-4">
+                    <iframe
+                      src={getCurrentVideoUrl()}
+                      className="w-full h-full"
+                      frameBorder="0"
+                      allowFullScreen
+                      title="激励视频"
+                    />
+                  </div>
 
-              <div className="text-center mb-4">
-                <h3 className="text-lg font-bold text-white">
-                  {getCurrentVideoName()}
-                </h3>
-                <p className="text-sm text-slate-400 mt-1">
-                  {getCurrentVideoDesc()}
-                </p>
-              </div>
+                  <div className="text-center mb-4">
+                    <h3 className="text-lg font-bold text-white">
+                      {getCurrentVideoName()}
+                    </h3>
+                    <p className="text-sm text-slate-400 mt-1">
+                      {getCurrentVideoDesc()}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="aspect-video bg-slate-700/50 rounded-xl flex items-center justify-center mb-4">
+                  <div className="text-center text-slate-400">
+                    <Heart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">请先在「设置」页面</p>
+                    <p className="text-sm">添加你喜欢的视频</p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-3 gap-2 max-h-40 overflow-y-auto">
-                {[...motivationalVideos, ...customVideos.map(v => ({
-                  id: v.id,
-                  name: v.name,
-                  description: v.description,
-                  bilibiliUrl: v.url,
-                }))].map((video) => (
-                  <button
-                    key={video.id}
-                    onClick={() => {
-                      useStore.getState().updateSettings({ favoriteStar: video.id });
-                    }}
-                    className={`p-2 rounded-xl border transition-all ${
-                      settings.favoriteStar === video.id
-                        ? 'bg-pink-500/20 border-pink-500 text-pink-300'
-                        : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700'
-                    }`}
-                  >
-                    <div className="text-xs font-medium line-clamp-2">{video.name}</div>
-                  </button>
-                ))}
+                {customVideos.length > 0 ? (
+                  customVideos.map((video) => (
+                    <button
+                      key={video.id}
+                      onClick={() => {
+                        useStore.getState().updateSettings({ favoriteStar: video.id });
+                      }}
+                      className={`p-2 rounded-xl border transition-all ${
+                        settings.favoriteStar === video.id
+                          ? 'bg-pink-500/20 border-pink-500 text-pink-300'
+                          : 'bg-slate-700/50 border-slate-600 text-slate-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      <div className="text-xs font-medium line-clamp-2">{video.name}</div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="col-span-3 text-center py-4 text-slate-500 text-sm">
+                    还没有添加视频<br />
+                    请在「设置」页面添加视频
+                  </div>
+                )}
               </div>
 
               <p className="text-xs text-slate-500 text-center mt-4">

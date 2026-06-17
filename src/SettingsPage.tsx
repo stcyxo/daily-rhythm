@@ -7,7 +7,9 @@ import { voiceOptions, getFemaleVoices, getMaleVoices } from './azureTTS';
 import { initTTSService } from './azureTTS';
 
 export function SettingsPage() {
-  const { settings, updateSettings, resetAllData, resetToday, customVideos, addCustomVideo, removeCustomVideo } = useStore();
+  const { settings, updateSettings, resetAllData, resetToday, customVideos, addCustomVideo, removeCustomVideo, exportData, importData } = useStore();
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useState(() => { const ref = { current: null as HTMLInputElement | null }; return ref; })[0];
   const [notifStatus, setNotifStatus] = useState<NotificationPermission | 'unsupported'>(
     typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'
   );
@@ -113,51 +115,44 @@ export function SettingsPage() {
       <div className="bg-gradient-to-br from-pink-500/10 to-rose-500/5 border border-pink-500/30 rounded-xl p-4">
         <div className="flex items-center gap-2 mb-3">
           <Heart className="w-4 h-4 text-pink-400" />
-          <span className="text-sm font-medium text-slate-300">激励明星</span>
+          <span className="text-sm font-medium text-slate-300">激励视频</span>
         </div>
         <p className="text-xs text-slate-400 mb-3">
-          选择你喜欢的明星/角色，当你需要鼓励时会播放他们的励志视频
+          添加你喜欢的励志视频链接，点击"鼓励一下"时播放
         </p>
         <div className="grid grid-cols-2 gap-2">
-          {/* 预置视频 */}
-          {motivationalVideos.map((video) => (
-            <button
-              key={video.id}
-              onClick={() => updateSettings({ favoriteStar: video.id })}
-              className={'p-3 rounded-lg border transition-all text-left ' +
-                (settings.favoriteStar === video.id
-                  ? 'bg-pink-500/20 border-pink-500 text-pink-300'
-                  : 'bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-700/50')}
-            >
-              <div className="text-sm font-medium">{video.name}</div>
-              <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{video.description}</div>
-            </button>
-          ))}
           {/* 自定义视频 */}
-          {customVideos.map((video) => (
-            <button
-              key={video.id}
-              onClick={() => updateSettings({ favoriteStar: video.id })}
-              className={'p-3 rounded-lg border transition-all text-left relative ' +
-                (settings.favoriteStar === video.id
-                  ? 'bg-pink-500/20 border-pink-500 text-pink-300'
-                  : 'bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-700/50')}
-            >
-              <div className="text-sm font-medium">{video.name}</div>
-              <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{video.description}</div>
+          {customVideos.length > 0 ? (
+            customVideos.map((video) => (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm('确定删除这个视频吗？')) {
-                    removeCustomVideo(video.id);
-                  }
-                }}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/70 text-slate-400 hover:text-rose-400 flex items-center justify-center"
+                key={video.id}
+                onClick={() => updateSettings({ favoriteStar: video.id })}
+                className={'p-3 rounded-lg border transition-all text-left relative ' +
+                  (settings.favoriteStar === video.id
+                    ? 'bg-pink-500/20 border-pink-500 text-pink-300'
+                    : 'bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-700/50')}
               >
-                <X className="w-3 h-3" />
+                <div className="text-sm font-medium">{video.name}</div>
+                <div className="text-xs text-slate-500 mt-0.5 line-clamp-2">{video.description}</div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('确定删除这个视频吗？')) {
+                      removeCustomVideo(video.id);
+                    }
+                  }}
+                  className="absolute top-1 right-1 w-5 h-5 rounded-full bg-slate-900/70 text-slate-400 hover:text-rose-400 flex items-center justify-center"
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </button>
-            </button>
-          ))}
+            ))
+          ) : (
+            <div className="col-span-2 text-center py-8 text-slate-500 text-sm">
+              还没有添加视频<br />
+              点击下方按钮添加你喜欢的视频
+            </div>
+          )}
         </div>
         <button
           onClick={() => setShowAddVideo(true)}
@@ -434,6 +429,47 @@ export function SettingsPage() {
           <span className="text-sm font-medium text-slate-300">数据管理</span>
         </div>
         <div className="space-y-2">
+          <div className="flex gap-2">
+            <button onClick={() => exportData()} className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-medium py-2.5 rounded-lg text-sm flex items-center justify-center gap-2">
+              <ExternalLink className="w-4 h-4" />
+              导出数据
+            </button>
+            <label className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-medium py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 cursor-pointer">
+              <ExternalLink className="w-4 h-4" />
+              导入数据
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const content = event.target?.result as string;
+                    const result = importData(content);
+                    if (result.success) {
+                      alert('数据导入成功！');
+                      setImportError(null);
+                    } else {
+                      setImportError(result.error || '导入失败');
+                    }
+                  };
+                  reader.readAsText(file);
+                  
+                  // 清空input
+                  e.target.value = '';
+                }}
+                className="hidden"
+              />
+            </label>
+          </div>
+          {importError && (
+            <p className="text-xs text-rose-400 text-center">{importError}</p>
+          )}
+          <p className="text-xs text-slate-500 text-center">导出后可保存到文件，换设备时导入即可恢复数据</p>
+          <hr className="border-slate-700 my-3" />
           <button onClick={() => {
             if (confirm('确定清空今日所有完成记录吗？')) resetToday();
           }} className="w-full bg-slate-700/50 hover:bg-slate-700 text-slate-300 font-medium py-2.5 rounded-lg text-sm">

@@ -1,11 +1,12 @@
-﻿import { useStore } from './store';
-import { getWeekDates } from './utils';
+import { useStore } from './store';
+import { getWeekDates, getTodayString } from './utils';
 import { TrendingUp, Target, Flame } from 'lucide-react';
 
 export function StatsPage() {
   const { tasks, completions } = useStore();
   const weekDates = getWeekDates();
-  const today = weekDates[6];
+  const today = getTodayString(); // 今天的日期字符串
+  const todayIndex = weekDates.indexOf(today); // 今天在周数组中的索引
   const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   
   const dailyStats = weekDates.map((date, index) => {
@@ -88,7 +89,7 @@ export function StatsPage() {
         <div className="text-sm text-slate-300 font-medium mb-3">每日完成率</div>
         <div className="flex items-end justify-between gap-1.5 h-40">
           {dailyStats.map((day, index) => {
-            const isToday = index === 6;
+            const isToday = index === todayIndex && todayIndex !== -1;
             const height = day.total === 0 ? 4 : Math.max(4, (day.rate / maxRate) * 100);
             const barColor = day.rate >= 80 ? 'bg-emerald-500' : day.rate >= 50 ? 'bg-sky-500' : day.rate > 0 ? 'bg-amber-500' : 'bg-slate-600';
             
@@ -108,22 +109,26 @@ export function StatsPage() {
       <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
         <div className="text-sm text-slate-300 font-medium mb-3">每日详情</div>
         <div className="space-y-2">
-          {dailyStats.slice().reverse().map((day, idx) => (
-            <div key={day.date} className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2">
-                <span className={idx === 0 ? 'text-sky-400 font-medium' : 'text-slate-400'}>
-                  {day.weekday} {idx === 0 && '(今天)'}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-slate-500 text-xs">{day.completed}/{day.total}</span>
-                <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                  <div className={'h-full ' + (day.rate >= 80 ? 'bg-emerald-500' : day.rate >= 50 ? 'bg-sky-500' : 'bg-amber-500')} style={{ width: day.rate + '%' }} />
+          {dailyStats.slice().reverse().map((day, idx) => {
+            const originalIndex = weekDates.length - 1 - idx;
+            const isToday = originalIndex === todayIndex && todayIndex !== -1;
+            return (
+              <div key={day.date} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <span className={isToday ? 'text-sky-400 font-medium' : 'text-slate-400'}>
+                    {day.weekday} {isToday && '(今天)'}
+                  </span>
                 </div>
-                <span className="text-white font-mono text-xs w-10 text-right">{day.rate}%</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-slate-500 text-xs">{day.completed}/{day.total}</span>
+                  <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                    <div className={'h-full ' + (day.rate >= 80 ? 'bg-emerald-500' : day.rate >= 50 ? 'bg-sky-500' : 'bg-amber-500')} style={{ width: day.rate + '%' }} />
+                  </div>
+                  <span className="text-white font-mono text-xs w-10 text-right">{day.rate}%</span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

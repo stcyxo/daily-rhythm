@@ -39,6 +39,10 @@ interface AppState {
   addCustomVideo: (video: Omit<CustomVideo, 'id'>) => void;
   removeCustomVideo: (id: string) => void;
   clearCustomVideos: () => void;
+  
+  // 数据导入导出
+  exportData: () => void;
+  importData: (jsonString: string) => { success: boolean; error?: string };
 }
 
 export const useStore = create<AppState>()(
@@ -208,6 +212,45 @@ export const useStore = create<AppState>()(
       
       clearCustomVideos: () => {
         set({ customVideos: [] });
+      },
+      
+      // 导出数据
+      exportData: () => {
+        const state = get();
+        const data = {
+          tasks: state.tasks,
+          completions: state.completions,
+          settings: state.settings,
+          customCheerImages: state.customCheerImages,
+          customCheerAudios: state.customCheerAudios,
+          customVideos: state.customVideos,
+          exportTime: new Date().toISOString(),
+        };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `daily-rhythm-backup-${getTodayString()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      },
+      
+      // 导入数据
+      importData: (jsonString: string) => {
+        try {
+          const data = JSON.parse(jsonString);
+          if (data.tasks) set({ tasks: data.tasks });
+          if (data.completions) set({ completions: data.completions });
+          if (data.settings) set({ settings: { ...get().settings, ...data.settings } });
+          if (data.customCheerImages) set({ customCheerImages: data.customCheerImages });
+          if (data.customCheerAudios) set({ customCheerAudios: data.customCheerAudios });
+          if (data.customVideos) set({ customVideos: data.customVideos });
+          return { success: true };
+        } catch (error) {
+          return { success: false, error: '文件格式不正确' };
+        }
       },
     }),
     {
